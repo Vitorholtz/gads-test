@@ -2,63 +2,59 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Running the project
+## Commands
 
-There is no build step. The project uses native ES Modules (`type="module"`), so it **must be served over HTTP** — opening `index.html` directly via `file://` will fail with CORS errors on the imports.
+```bash
+npm run dev      # dev server at http://localhost:5173
+npm run build    # type-check (tsc) then Vite production build
+npm run preview  # serve the dist/ folder locally
+```
 
-Use any static file server from the project root, for example:
-- VS Code **Live Server** extension (right-click `index.html` → Open with Live Server)
-- `npx serve .` (requires Node.js)
-- `python -m http.server`
+## Stack
 
-There are no tests, no linter, and no package.json.
+| Layer | Choice |
+|---|---|
+| Framework | React 18 |
+| Language | TypeScript (strict) |
+| Build | Vite 6 |
+| Styles | Tailwind CSS v3 |
+| State | Zustand |
+| Icons | Material Symbols Rounded (Google Fonts CDN) |
+| Font | Inter Variable (Google Fonts CDN) |
 
 ## Architecture
 
-### State management — `js/state.js`
+### State — `src/store/useAppStore.ts`
 
-A single plain-object store with a minimal pub/sub API:
+Single Zustand store with two pieces of state:
 
-```js
-state.update({ activePage: 'Resultados' }); // merges patch, notifies all subscribers
-state.subscribe(snapshot => { /* { sidebarOpen, activePage } */ });
+```ts
+sidebarOpen: boolean      // drives sidebar transform + main margin-left
+activePage: string        // drives page routing and header label
 ```
 
-All components subscribe to this singleton. There is no framework — components update their own DOM nodes directly inside their subscriber callbacks.
+All components read from this store directly via `useAppStore()`. No prop drilling for layout state.
 
-### Component model — `js/components/`
+### Page routing — `src/App.tsx`
 
-Each file exports a single `create*()` function that builds and returns a DOM node. Components wire themselves to `state` at creation time: they call `state.subscribe()` internally and update their own elements when state changes. They do **not** re-render; they mutate specific child nodes.
+`App.tsx` owns a `pages` registry map:
 
-### Page routing — `js/app.js`
-
-`app.js` owns the `<main>` element and a `pages` registry map:
-
-```js
-const pages = {
-  'Gestão de materiais': createGestaoMateriaisPage,
-  // add new entries here, keyed by the exact sidebar label string
-};
+```ts
+const pages: Record<string, React.ComponentType> = {
+  'Gestão de materiais': GestaoMateriais,
+}
 ```
 
-When `activePage` changes, `main.innerHTML = ''` and the matching factory is called. Pages with no registered factory render nothing. The sidebar item label string is the routing key — keep them in sync.
+When `activePage` changes, the matching component renders inside `<main>`. Pages with no entry render nothing. The sidebar item label is the routing key — keep them in sync with the `NAV_GROUPS` in `Sidebar.tsx`.
 
 ### Adding a new page
 
-1. Create `js/pages/<name>.js` exporting `create<Name>Page()`.
-2. Create `css/pages/<name>.css` with page-specific styles.
-3. Add the CSS link to `index.html`.
-4. Register the factory in `js/app.js`'s `pages` map using the exact sidebar label as the key.
+1. Create `src/pages/<Name>.tsx` exporting a default React component.
+2. Register it in `App.tsx`'s `pages` map using the exact sidebar label as key.
+3. Add the nav item to `NAV_GROUPS` in `Sidebar.tsx`.
 
-### CSS conventions
+### Component conventions
 
-- Global layout and shell components live in `css/styles.css`.
-- Page-specific styles live in `css/pages/<page-name>.css`.
-- CSS custom properties for shared values: `--header-h: 56px`, `--sidebar-w: 280px`, `--transition: 300ms ease`.
-- BEM-style class names scoped per component (`.sidebar__item`, `.gm-card__footer`). Page components are prefixed with a short namespace (e.g. `gm-` for Gestão de Materiais).
-
-### External dependencies (CDN only)
-
-- **Inter Variable** — Google Fonts
-- **Material Symbols Rounded** — Google Fonts icon font, used via `<span class="material-symbols-rounded">icon_name</span>`
-- No JavaScript libraries; no bundler.
+- Icons: `<MIcon name="icon_name" size={20} />` — wraps `material-symbols-rounded`.
+- All styling via Tailwind utility classes; no separate CSS files.
+- Page-specific sub-components live in the same file as the page (e.g. `Subheader`, `Filters`, `CardItem` inside `GestaoMateriais.tsx`) until they need to be reused.
