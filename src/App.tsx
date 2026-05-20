@@ -1,12 +1,16 @@
 import { useAppStore } from './store/useAppStore'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
+import Vitrine from './pages/Vitrine'
 import GestaoMateriais from './pages/GestaoMateriais'
+import ComprarDiarias from './pages/ComprarDiarias'
 
 const SIDEBAR_W = 280
 
 const pages: Record<string, React.ComponentType> = {
+  'Vitrine':             Vitrine,
   'Gestão de materiais': GestaoMateriais,
+  'Comprar Diárias':     ComprarDiarias,
 }
 
 export default function App() {
@@ -18,19 +22,18 @@ export default function App() {
       <Header />
       <Sidebar />
       <main
-        style={{
-          marginTop: 56,
-          marginLeft: sidebarOpen ? SIDEBAR_W : 0,
-        }}
+        style={{ marginTop: 56, marginLeft: sidebarOpen ? SIDEBAR_W : 0 }}
         className="transition-all duration-300 min-h-[calc(100vh-56px)]"
       >
         {Page && <Page />}
       </main>
 
-      {/* FAB */}
-      <button className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center shadow-md z-50 transition-colors">
-        <span className="material-symbols-rounded text-blue-600" style={{ fontSize: 24 }}>add</span>
-      </button>
+      {/* FAB — hidden during purchase flow */}
+      {activePage !== 'Comprar Diárias' && (
+        <button className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-blue-100 hover:bg-blue-200 flex items-center justify-center shadow-md z-50 transition-colors">
+          <span className="material-symbols-rounded text-blue-600" style={{ fontSize: 24 }}>add</span>
+        </button>
+      )}
     </div>
   )
 }
